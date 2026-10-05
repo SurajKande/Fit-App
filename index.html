@@ -41,8 +41,15 @@ const wk0=()=>dateOf(0),tyx=i=>((S.sw&&S.sw[wk0()])||TY)[i];
 function hits(dt,i){const ty=tyx(i),o={};if(ty!="A"&&ty!="B")return o;EX[ty].forEach((r,j)=>{const L=(S.log[dt]||{})[ty+j];if(L&&L.s.some(x=>x))MX[ty][j][0].forEach(m=>o[m]=1)});return o}
 function plan(i){const ty=tyx(i);if(ty!="A"&&ty!="B")return[];const s=new Set();MX[ty].forEach(x=>x[0].forEach(m=>s.add(m)));return[...s]}
 let S;try{S=JSON.parse(localStorage.getItem("fp")||"null")}catch(e){}
-S=S||{};["sel","log","food","done","last","sw"].forEach(k=>S[k]=S[k]||{});S.wt=S.wt||[{d:"2026-10-05",w:95.7}];S.sc=S.sc||[{d:"2026-10-05",f:33,m:36.5}];S.start=S.start||ds(now);
-const save=()=>{try{localStorage.setItem("fp",JSON.stringify(S))}catch(e){}};
+function norm(){S=S||{};["sel","log","food","done","last","sw"].forEach(k=>S[k]=S[k]||{});S.wt=S.wt||[{d:"2026-10-05",w:95.7}];S.sc=S.sc||[{d:"2026-10-05",f:33,m:36.5}];S.start=S.start||ds(now)}norm();
+let C={};try{C=JSON.parse(localStorage.getItem("fpcfg")||"{}")}catch(e){}
+let sha=null,st=C.t?"Not synced yet":"Local only",tm;
+const B=x=>btoa(unescape(encodeURIComponent(x))),U=x=>decodeURIComponent(escape(atob(x.replace(/\n/g,""))));
+const gu=()=>"https://api.github.com/repos/"+C.r+"/contents/data.json",gh=()=>({Authorization:"Bearer "+C.t,Accept:"application/vnd.github+json"});
+function stat(t){st=t;const e=document.getElementById("st");if(e)e.textContent=t}
+async function pull(){if(!C.t||!C.r)return;stat("Syncing...");try{const r=await fetch(gu(),{headers:gh()});if(r.status==404){sha=null;return await push()}if(!r.ok){stat("Sync error "+r.status+": check token and repo");return}const j=await r.json();sha=j.sha;const R=JSON.parse(U(j.content));if((R.ts||0)>(S.ts||0)){S=R;norm();try{localStorage.setItem("fp",JSON.stringify(S))}catch(e){}render()}else if((R.ts||0)<(S.ts||0)){return await push()}stat("Synced ✓")}catch(e){stat("Offline, saved on this device")}}
+async function push(n){if(!C.t||!C.r)return;stat("Saving...");const put=()=>fetch(gu(),{method:"PUT",headers:gh(),body:JSON.stringify({message:"Update fit data "+new Date().toISOString(),content:B(JSON.stringify(S,null,1)),sha:sha||undefined})});try{let r=await put();if((r.status==409||r.status==422)&&!n){const g=await fetch(gu(),{headers:gh()});if(g.ok){sha=(await g.json()).sha;return await push(1)}}if(!r.ok){stat("Sync error "+r.status);return}sha=(await r.json()).content.sha;stat("Synced ✓")}catch(e){stat("Offline, saved on this device")}}
+const save=()=>{S.ts=Date.now();try{localStorage.setItem("fp",JSON.stringify(S))}catch(e){}clearTimeout(tm);tm=setTimeout(push,2000)};
 let di=ti,tab="h",iv;
 function rest(s){clearInterval(iv);let r=s;const e=()=>{const t=document.getElementById("tm");if(t)t.textContent=r>0?r+"s":"Go!"};e();iv=setInterval(()=>{r--;e();if(r<=0){clearInterval(iv);try{navigator.vibrate&&navigator.vibrate(300)}catch(x){}}},1000)}
 function lg(dt,id){S.log[dt]=S.log[dt]||{};return S.log[dt][id]=S.log[dt][id]||{s:[0,0,0],w:""}}
@@ -57,7 +64,7 @@ h+=`<div class="card"><div class="row"><div><small>Hits ${MX[ty][i][0].join(", "
 return h+`<button class="big" data-a="done">${S.done[dt]?"Day done ✓ (tap to undo)":"Mark day done"}</button>`}
 function Fd(){const a=S.food[ds(now)]||[],t=F.reduce((s,f,i)=>s+(a[i]?f[1]:0),0);
 return `<div class="card"><h2>Protein today: ${t} of 120 g</h2><div class="bar"><i style="width:${Math.min(100,t/1.2)}%"></i></div></div><div class="card">`+F.map((f,i)=>`<div class="row"><span>${f[0]} <small>${f[1]} g</small></span><button class="${a[i]?"on":""}" data-a="food" data-i="${i}">${a[i]?"Eaten":"Add"}</button></div>`).join("")+'</div><p class="note">Target about 2,100-2,200 kcal. Half your plate is sabzi or salad, about 1 tsp oil per person per dish.</p>'}
-function P(){return P0()+SC()}
+function P(){return P0()+SC()+SY()}
 function P0(){const w=S.wt,wk=Math.floor((now-new Date(S.start+"T00:00:00"))/6048e5)+1;let n=0;for(let i=0;i<6;i++)if(S.done[dateOf(i)])n++;
 let sp="";if(w.length>1){const v=w.map(x=>x.w),mn=Math.min(...v),r=Math.max(...v)-mn||1;sp='<svg viewBox="0 0 300 80" width="100%"><polyline fill="none" stroke="var(--acc)" stroke-width="3" points="'+v.map((y,i)=>(i*300/(v.length-1)).toFixed(1)+","+(70-(y-mn)/r*60).toFixed(1)).join(" ")+'"/></svg>'}
 return `<div class="card"><h2>Week ${wk}: ${n} of 6 workouts done</h2><p>${wk>4?"Time to rotate: tap Swap on each lift for a fresh variation.":"Keep the same lifts for the first 4 weeks and add weight when it feels easy."}</p></div><div class="card"><h2>Weight check-in</h2><div class="row"><input id="wi" inputmode="decimal" placeholder="kg, once a week"><button data-a="wadd">Save</button></div>${sp}${w.slice(-6).reverse().map(x=>`<div class="row"><span>${x.d}</span><b>${x.w} kg</b></div>`).join("")}${w.length>1?`<p>Change since start: ${(w[w.length-1].w-w[0].w).toFixed(1)} kg</p>`:""}</div>`}
@@ -66,6 +73,7 @@ B:["5 min easy cycle or incline walk","10 bodyweight good mornings (hinge at the
 E:["3 min slow walk, then build to your pace","Leg swings, 10 each leg","Ankle circles, 10 each way"],
 I:["5 min easy cycle or rower","3 build-ups: 20 s fast, 40 s easy","Leg swings, 10 each leg"]};
 function WUc(ty,dt){const L=lg(dt,"wu");return `<div class="card"><div class="row"><h2>Warm-up, 5-8 min</h2><button data-a="wu" class="${L.s[0]?"on":""}">${L.s[0]?"Done ✓":"Mark done"}</button></div><ul>`+WU[ty].map(x=>`<li>${x}</li>`).join("")+"</ul></div>"}
+function SY(){return `<div class="card"><h2>Save data to GitHub</h2><small>Status: <b id="st">${st}</b></small><p><small>Use a private repo for data. The token needs Contents read and write on that repo only.</small></p><div class="row"><input id="gr" style="width:100%" placeholder="owner/repo, e.g. SurajKande/Fit-Data" value="${C.r||""}"></div><div class="row"><input id="gt" type="password" style="width:100%" placeholder="${C.t?"Token saved (leave blank to keep)":"Fine-grained access token"}"></div><div class="row"><button data-a="gsave">Save and sync</button><button data-a="gsync">Sync now</button></div></div>`}
 function SC(){const a=S.sc;
 const d=(k,u)=>{const x=a.filter(e=>e[k]!=null);if(x.length<2)return "";const v=x[x.length-1][k]-x[0][k];return (v>0?"+":"")+v.toFixed(1)+u+" since first"};
 return `<div class="card"><h2>Body scan and waist</h2><small>Log every 2-4 weeks, same time of day, same conditions.</small><div class="row"><input id="sf" inputmode="decimal" placeholder="Body fat %"><input id="sm" inputmode="decimal" placeholder="Muscle kg"></div><div class="row"><input id="sx" inputmode="decimal" placeholder="Waist cm"><button data-a="sadd">Save</button></div>`+a.slice(-5).reverse().map(e=>`<div class="row"><span>${e.d}</span><small>${e.f!=null?e.f+"% fat ":""}${e.m!=null?e.m+" kg muscle ":""}${e.x!=null?e.x+" cm waist":""}</small></div>`).join("")+`<p><small>Body fat: ${d("f","%")||"first entry"}. Muscle: ${d("m"," kg")||"first entry"}. Waist: ${d("x"," cm")||"add a measurement"}.</small></p></div>`}
@@ -85,10 +93,12 @@ if(a=="set"){const L=lg(dt,id),j=+b.dataset.j;L.s[j]=L.s[j]?0:1;save();render();
 if(a=="swp"){const j=+document.getElementById("sw").value,r=[...(S.sw[wk0()]||TY)];[r[di],r[j]]=[r[j],r[di]];S.sw[wk0()]=r}
 if(a=="sadd"){const g=i=>parseFloat(document.getElementById(i).value),f=g("sf"),m=g("sm"),x=g("sx");if(!(f||m||x))return;S.sc.push({d:ds(now),f:f||null,m:m||null,x:x||null})}
 if(a=="wu"){const L=lg(dt,"wu");L.s[0]=L.s[0]?0:1}
+if(a=="gsave"){const r=document.getElementById("gr").value.trim().replace(/^https:\/\/github.com\//,"").replace(/\.git$/,""),t=document.getElementById("gt").value.trim()||C.t;if(!r||!t)return;C={r,t};try{localStorage.setItem("fpcfg",JSON.stringify(C))}catch(x){}pull();return}
+if(a=="gsync"){pull();return}
 if(a=="done")S.done[dt]=!S.done[dt];
 if(a=="food"){const k=ds(now);S.food[k]=S.food[k]||[];S.food[k][+b.dataset.i]=S.food[k][+b.dataset.i]?0:1}
 if(a=="wadd"){const v=parseFloat(document.getElementById("wi").value);if(!v)return;S.wt.push({d:ds(now),w:v})}
 save();render()});
 document.addEventListener("change",e=>{const i=e.target.closest("input[data-id]");if(!i)return;lg(dateOf(di),i.dataset.id).w=i.value;if(i.value)S.last[i.dataset.id]=i.value;save()});
-render();
+render();pull();
 </script></body></html>
