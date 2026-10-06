@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src https://api.github.com; img-src data:; base-uri 'none'; form-action 'none'">
-<meta name="theme-color" content="#080a10"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"><meta name="apple-mobile-web-app-capable" content="yes">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src https://api.github.com; img-src data: 'self'; manifest-src 'self'; worker-src 'self'; base-uri 'none'; form-action 'none'">
+<meta name="theme-color" content="#080a10"><link rel="manifest" href="manifest.webmanifest"><link rel="apple-touch-icon" href="icon-192.png"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"><meta name="apple-mobile-web-app-capable" content="yes">
 <title>My Fit Plan</title>
 <style>
 :root{--bg:#f3f5fb;--card:#fff;--ink:#0d1220;--mute:#5a6580;--line:#dde3f0;--acc:#0b8f7a;--acc2:#3b5bf0;--on:#fff;--chip:#eef1f9;--g1:rgba(11,143,122,.12);--g2:rgba(59,91,240,.12);--navbg:rgba(255,255,255,.92);--fd:"Barlow Condensed","Arial Narrow",Impact,sans-serif;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px)}
@@ -34,6 +34,7 @@ input,select{font:inherit;padding:10px 12px;border:1px solid var(--line);border-
 .wk{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin:4px 0 14px}.wd{text-align:center;font-size:12px;color:var(--mute)}
 .wd i{display:grid;place-items:center;width:100%;max-width:44px;aspect-ratio:1;margin:0 auto 4px;border-radius:50%;font-style:normal;font-weight:700;background:var(--chip);border:1px solid var(--line)}
 .wd.done i{background:linear-gradient(135deg,var(--acc),var(--acc2));color:var(--on);border:0}.wd.now i{border:2px solid var(--acc);color:var(--acc)}.wd.miss i{border-color:#e5484d;color:#e5484d}.wd.rest i{opacity:.5}
+.sws{display:flex;gap:12px;margin:10px 0 14px}.sw{width:44px;height:44px;border-radius:50%;padding:0;border:2px solid var(--line)}.sw.on{outline:3px solid var(--ink);outline-offset:2px;border:2px solid var(--line)}
 .sec{margin:18px 2px 8px}.mt{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
 .mc{position:relative;overflow:hidden;border-radius:12px;background:var(--chip);border:1px solid var(--line);padding:9px 10px;display:flex;justify-content:space-between;align-items:center;font-size:13px}
 .mc::before{content:"";position:absolute;inset:0;width:var(--p);background:var(--c);opacity:.32}.mc>*{position:relative}.dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:8px}
@@ -84,7 +85,7 @@ let sha=null,st=C.t?"Not synced yet":"Local only",tm,ready=!C.t,first=true,fresh
 const B=x=>btoa(unescape(encodeURIComponent(x))),U=x=>decodeURIComponent(escape(atob(x.replace(/\n/g,""))));
 const gu=()=>"https://api.github.com/repos/"+C.r+"/contents/data.json",gh=()=>({Authorization:"Bearer "+C.t,Accept:"application/vnd.github+json"});
 function stat(t){st=t;const e=document.getElementById("st");if(e)e.textContent=t}
-async function pull(){if(!C.t||!C.r)return;stat("Syncing...");try{const r=await fetch(gu(),{headers:gh()});if(r.status==404){sha=null;ready=true;return await push()}if(!r.ok){stat("Sync error "+r.status+": check token and repo");return}const j=await r.json();sha=j.sha;const R=JSON.parse(U(j.content));const take=(R.ts||0)>(S.ts||0)||(first&&fresh);first=false;ready=true;if(take){S=R;norm();try{localStorage.setItem("fp",JSON.stringify(S))}catch(e){}render()}else if((R.ts||0)<(S.ts||0)){return await push()}stat("Synced ✓")}catch(e){stat("Offline, saved on this device")}}
+async function pull(){if(!C.t||!C.r)return;stat("Syncing...");try{const r=await fetch(gu(),{headers:gh()});if(r.status==404){sha=null;ready=true;return await push()}if(!r.ok){stat("Sync error "+r.status+": check token and repo");return}const j=await r.json();sha=j.sha;const R=JSON.parse(U(j.content));const take=(R.ts||0)>(S.ts||0)||(first&&fresh);first=false;ready=true;if(take){S=R;norm();applyTheme();try{localStorage.setItem("fp",JSON.stringify(S))}catch(e){}render()}else if((R.ts||0)<(S.ts||0)){return await push()}stat("Synced ✓")}catch(e){stat("Offline, saved on this device")}}
 async function push(n){if(!C.t||!C.r)return;stat("Saving...");const put=()=>fetch(gu(),{method:"PUT",headers:gh(),body:JSON.stringify({message:"Update fit data "+new Date().toISOString(),content:B(JSON.stringify(S,null,1)),sha:sha||undefined})});try{let r=await put();if((r.status==409||r.status==422)&&!n){const g=await fetch(gu(),{headers:gh()});if(g.ok){sha=(await g.json()).sha;return await push(1)}}if(!r.ok){stat("Sync error "+r.status);return}sha=(await r.json()).content.sha;stat("Synced ✓")}catch(e){stat("Offline, saved on this device")}}
 const save=()=>{S.ts=Date.now();try{localStorage.setItem("fp",JSON.stringify(S))}catch(e){}clearTimeout(tm);if(ready)tm=setTimeout(push,2000)};
 let di=ti,tab="h",iv;
@@ -108,7 +109,7 @@ else h+=TM()+EX[ty].map((r,i)=>XC(ty,i,dt)).join("");
 return h+(ty=="A"||ty=="B"?CD:"")+`<button class="big" data-a="done">${S.done[dt]?"Day done ✓ (tap to undo)":"Mark day done"}</button>`}
 function Fd(){const a=S.food[ds(now)]||[],t=F.reduce((s,f,i)=>s+(a[i]?f[1]:0),0);
 return `<div class="card"><h2>Protein today: ${t} of 120 g</h2><div class="bar"><i style="width:${Math.min(100,t/1.2)}%"></i></div></div><div class="card">`+F.map((f,i)=>`<div class="row"><span>${f[0]} <small>${f[1]} g</small></span><button class="${a[i]?"on":""}" data-a="food" data-i="${i}">${a[i]?"Eaten":"Add"}</button></div>`).join("")+'</div><p class="note">Target about 2,100-2,200 kcal. Half your plate is sabzi or salad, about 1 tsp oil per person per dish.</p>'}
-function P(){return P0()+SC()+SY()}
+function P(){return P0()+SC()+AP()+SY()}
 function P0(){const w=S.wt,wk=Math.floor((now-new Date(S.start+"T00:00:00"))/6048e5)+1;let n=0;for(let i=0;i<6;i++)if(S.done[dateOf(i)])n++;
 let sp="";if(w.length>1){const v=w.map(x=>x.w),mn=Math.min(...v),r=Math.max(...v)-mn||1;sp='<svg viewBox="0 0 300 80" width="100%"><polyline fill="none" stroke="var(--acc)" stroke-width="3" points="'+v.map((y,i)=>(i*300/(v.length-1)).toFixed(1)+","+(70-(y-mn)/r*60).toFixed(1)).join(" ")+'"/></svg>'}
 return `<div class="card"><h2>Week ${wk}: ${n} of 6 workouts done</h2><p>${wk>4?"Time to rotate: tap Swap on each lift for a fresh variation.":"Keep the same lifts for the first 4 weeks and add weight when it feels easy."}</p></div><div class="card"><h2>Weight check-in</h2><div class="row"><input id="wi" inputmode="decimal" placeholder="kg, once a week"><button data-a="wadd">Save</button></div>${sp}${w.slice(-6).reverse().map(x=>`<div class="row"><span>${E(x.d)}</span><b>${E(x.w)} kg</b></div>`).join("")}${w.length>1?`<p>Change since start: ${(w[w.length-1].w-w[0].w).toFixed(1)} kg</p>`:""}</div>`}
@@ -117,6 +118,13 @@ B:["5 min easy cycle or incline walk","10 bodyweight good mornings (hinge at the
 E:["3 min slow walk, then build to your pace","Leg swings, 10 each leg","Ankle circles, 10 each way"],
 I:["5 min easy cycle or rower","3 build-ups: 20 s fast, 40 s easy","Leg swings, 10 each leg"]};
 function WUc(ty,dt){const L=lg(dt,"wu");return `<div class="card"><div class="row"><h2>Warm-up, 5-8 min</h2><button data-a="wu" class="${L.s[0]?"on":""}">${L.s[0]?"Done ✓":"Mark done"}</button></div><ul>`+WU[ty].map(x=>`<li>${x}</li>`).join("")+"</ul></div>"}
+const PAL={aqua:["Aqua",["#0b8f7a","#3b5bf0","#ffffff"],["#34e0c0","#5b86ff","#04110f"]],ember:["Ember",["#d9480f","#c2255c","#ffffff"],["#ff8a3d","#ff4d8d","#1a0a04"]],violet:["Violet",["#7048e8","#c2255c","#ffffff"],["#a78bfa","#f472b6","#0c0818"]],lime:["Lime",["#2b8a3e","#0b7285","#ffffff"],["#a3e635","#2dd4bf","#0a1203"]],rose:["Rose",["#d6336c","#e8590c","#ffffff"],["#ff6b9d","#ffb454","#1f0612"]]};
+const hexA=(h,a)=>{const n=parseInt(h.slice(1),16);return `rgba(${n>>16},${n>>8&255},${n&255},${a})`};
+function isDark(){const t=document.documentElement.dataset.theme;if(t)return t=="dark";try{return matchMedia("(prefers-color-scheme:dark)").matches}catch(e){return false}}
+function applyTheme(){const R=document.documentElement,p=PAL[S.pal]||PAL.aqua,st=R.style;if(S.mode=="dark"||S.mode=="light")R.dataset.theme=S.mode;else delete R.dataset.theme;
+const dk=isDark(),v2=dk?p[2]:p[1];st.setProperty("--acc",v2[0]);st.setProperty("--acc2",v2[1]);st.setProperty("--on",v2[2]);st.setProperty("--g1",hexA(v2[0],dk?.16:.12));st.setProperty("--g2",hexA(v2[1],dk?.2:.12))}
+try{matchMedia("(prefers-color-scheme:dark)").addEventListener("change",()=>applyTheme())}catch(e){}
+function AP(){return `<div class="card"><h2>Appearance</h2><div class="sws">`+Object.entries(PAL).map(([k,v])=>`<button class="sw ${(S.pal||"aqua")==k?"on":""}" data-a="pal" data-k="${k}" style="background:linear-gradient(135deg,${v[2][0]},${v[2][1]})" aria-label="${v[0]} theme"></button>`).join("")+`</div><div class="row"><span>Mode</span><span>`+["auto","dark","light"].map(m=>`<button class="${(S.mode||"auto")==m?"on":""}" data-a="mode" data-k="${m}">${m[0].toUpperCase()+m.slice(1)}</button>`).join(" ")+`</span></div></div>`}
 function SY(){return `<div class="card"><h2>Save data to GitHub</h2><small>Status: <b id="st">${E(st)}</b></small><p><small>Use a private repo for data. The token needs Contents read and write on that repo only.</small></p><div class="row"><input id="gr" style="width:100%" placeholder="owner/repo, e.g. SurajKande/Fit-Data" value="${E(C.r)}"></div><div class="row"><input id="gt" type="password" style="width:100%" placeholder="${C.t?"Token saved (leave blank to keep)":"Fine-grained access token"}"></div><div class="row"><button data-a="gsave">Save and sync</button><button data-a="gsync">Sync now</button></div><div class="row"><button data-a="exp">Download my data</button></div></div>`}
 function SC(){const a=S.sc;
 const d=(k,u)=>{const x=a.filter(e=>e[k]!=null);if(x.length<2)return "";const v=x[x.length-1][k]-x[0][k];return (v>0?"+":"")+v.toFixed(1)+u+" since first"};
@@ -142,6 +150,9 @@ if(a=="sadd"){const g=i=>parseFloat(document.getElementById(i).value),f=g("sf"),
 if(a=="wu"){const L=lg(dt,"wu");L.s[0]=L.s[0]?0:1}
 if(a=="gsave"){const r=document.getElementById("gr").value.trim().replace(/^https:\/\/github.com\//,"").replace(/\.git$/,""),t=document.getElementById("gt").value.trim()||C.t;if(!r||!t)return;C={r,t};ready=false;first=true;try{localStorage.setItem("fpcfg",JSON.stringify(C))}catch(x){}pull();return}
 if(a=="gsync"){pull();return}
+if(a=="pal")S.pal=b.dataset.k;
+if(a=="mode")S.mode=b.dataset.k;
+if(a=="pal"||a=="mode")applyTheme();
 if(a=="go"){tab="w";di=ti;fx=-1}
 if(a=="focus")fx=0;if(a=="fprev")fx=Math.max(0,fx-1);if(a=="fexit")fx=-1;
 if(a=="fnext")fx=fx+1>=EX[tyx(di)].length?-1:fx+1;
@@ -151,5 +162,6 @@ if(a=="food"){const k=ds(now);S.food[k]=S.food[k]||[];S.food[k][+b.dataset.i]=S.
 if(a=="wadd"){const v=parseFloat(document.getElementById("wi").value);if(!v)return;S.wt.push({d:ds(now),w:v})}
 save();render()});
 document.addEventListener("change",e=>{const i=e.target.closest("input[data-id]");if(!i)return;if(i.dataset.id=="steps"){S.steps[ds(now)]=i.value;save();return}const L=lg(dateOf(di),i.dataset.id);L[i.dataset.k]=i.value;if(L.w&&L.r)S.last[i.dataset.id]={w:L.w,r:L.r};save()});
-render();pull();
+applyTheme();render();pull();
+if("serviceWorker" in navigator&&location.protocol=="https:")navigator.serviceWorker.register("sw.js").catch(()=>{});
 </script></body></html>
